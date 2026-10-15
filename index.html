@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play 3 YouTube Videos Simultaneously</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .video-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    iframe {
+      width: 100%;
+      max-width: 360px;
+      height: 215px;
+      border: none;
+      border-radius: 8px;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background-color: #ff0000;
+      color: white;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    button:hover {
+      background-color: #cc0000;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Multi-Video Synchronous Player</h1>
+
+  <div class="video-container">
+    <div id="player1"></div>
+    <div id="player2"></div>
+    <div id="player3"></div>
+  </div>
+
+  <div class="controls">
+    <button onclick="playAll()">Play All</button>
+    <button onclick="pauseAll()">Pause All</button>
+  </div>
+
+  <script>
+    // Replace these with your target YouTube video IDs
+    const videoIds = ['dQw4w9WgXcQ', '3JZ_D3ELwOQ', 'L_LUpnjgPso'];
+    const players = [];
+
+    // Load YouTube IFrame API
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    function onYouTubeIframeAPIReady() {
+      videoIds.forEach((id, index) => {
+        players.push(new YT.Player(`player${index + 1}`, {
+          videoId: id,
+          playerVars: {
+            'autoplay': 1,
+            'mute': 1, // Required for autoplay in modern browsers
+            'controls': 1
+          }
+        }));
+      });
+    }
+
+    function playAll() {
+      players.forEach(player => player.playVideo && player.playVideo());
+    }
+
+    function pauseAll() {
+      players.forEach(player => player.pauseVideo && player.pauseVideo());
+    }
+  </script>
+</body>
+</html>
