@@ -1,161 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Multi-Stream Audio Controller</title>
-    <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; margin: 20px; }
-        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
-        input { padding: 8px; width: 300px; background: #222; border: 1px solid #444; color: #fff; border-radius: 4px; }
-        button { padding: 8px 15px; background: #ff0000; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
-        button:hover { background: #cc0000; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; }
-        .video-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border: 1px solid #333; }
-        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
-        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-        .audio-bar { margin-top: 10px; display: flex; justify-content: space-between; gap: 10px; }
-        .audio-bar button { flex: 1; background: #333; }
-        .audio-bar button.active { background: #00bcd4; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Multi-Video Player</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .input-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .input-group label {
+      width: 70px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #333;
+      background-color: #1e1e1e;
+      color: #fff;
+    }
+    .video-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    iframe {
+      width: 100%;
+      max-width: 360px;
+      height: 215px;
+      border: none;
+      border-radius: 8px;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #ff0000;
+      color: white;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    button.secondary {
+      background-color: #333;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+  </style>
 </head>
 <body>
 
-    <h2>📺 YouTube Multi-Live Dashboard</h2>
-    
-    <div class="controls">
-        <input type="text" id="videoUrl" placeholder="Paste YouTube Video URL or ID here...">
-        <button id="addBtn" onclick="addVideo()" disabled>Loading API...</button>
-        <button onclick="unmuteAll()" style="background:#4caf50;">🔊 Unmute All</button>
+  <h1>Multi-Video Synchronous Player</h1>
+
+  <div class="input-section">
+    <div class="input-group">
+      <label for="url1">Video 1:</label>
+      <input type="text" id="url1" placeholder="Paste YouTube link or ID..." value="dQw4w9WgXcQ">
     </div>
+    <div class="input-group">
+      <label for="url2">Video 2:</label>
+      <input type="text" id="url2" placeholder="Paste YouTube link or ID..." value="3JZ_D3ELwOQ">
+    </div>
+    <div class="input-group">
+      <label for="url3">Video 3:</label>
+      <input type="text" id="url3" placeholder="Paste YouTube link or ID..." value="L_LUpnjgPso">
+    </div>
+    <button onclick="updateVideos()" style="margin-top: 10px;">Load Videos</button>
+  </div>
 
-    <div class="grid" id="videoGrid"></div>
+  <div class="video-container">
+    <div id="player1"></div>
+    <div id="player2"></div>
+    <div id="player3"></div>
+  </div>
 
-    <script>
-        let players = [];
-        let playerIndex = 0;
-        let isApiReady = false;
+  <div class="controls">
+    <button class="secondary" onclick="playAll()">Play All</button>
+    <button class="secondary" onclick="pauseAll()">Pause All</button>
+  </div>
 
-        // 1. This function runs automatically as soon as the YouTube API script fully loads
-        window.onYouTubeIframeAPIReady = function() {
-            isApiReady = true;
-            const addBtn = document.getElementById('addBtn');
-            addBtn.innerText = "+ Add Stream";
-            addBtn.disabled = false;
-        };
+  <script>
+    const players = [null, null, null];
 
-        // 2. Load the YouTube Iframe API asynchronously
-        const tag = document.createElement('script');
-        tag.src = "https://youtube.com";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    // Helper: extracts 11-char video ID from short link, watch URL, embed URL, or raw ID
+    function extractVideoId(input) {
+      const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      const match = input.trim().match(regex);
+      return match ? match[1] : input.trim();
+    }
 
-        // Extract 11-character video ID from any standard YouTube link
-        function extractVideoId(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
-            return (match && match.length === 11) ? match[2] : url;
+    // Load YouTube IFrame API
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    function onYouTubeIframeAPIReady() {
+      ['url1', 'url2', 'url3'].forEach((id, index) => {
+        const videoId = extractVideoId(document.getElementById(id).value);
+        players[index] = new YT.Player(`player${index + 1}`, {
+          videoId: videoId,
+          playerVars: {
+            'autoplay': 1,
+            'mute': 1, // Autoplay requires mute in browsers
+            'controls': 1
+          }
+        });
+      });
+    }
+
+    function updateVideos() {
+      ['url1', 'url2', 'url3'].forEach((id, index) => {
+        const rawValue = document.getElementById(id).value;
+        const videoId = extractVideoId(rawValue);
+        if (players[index] && videoId) {
+          players[index].loadVideoById(videoId);
         }
+      });
+    }
 
-        function addVideo() {
-            if (!isApiReady) return;
+    function playAll() {
+      players.forEach(p => p && p.playVideo && p.playVideo());
+    }
 
-            const input = document.getElementById('videoUrl');
-            const videoId = extractVideoId(input.value.trim());
-            if (!videoId || videoId.length !== 11) return alert("Please enter a valid YouTube URL or 11-character ID");
-
-            const currentId = `player-${playerIndex}`;
-            
-            // Create UI layout elements
-            const card = document.createElement('div');
-            card.className = 'video-card';
-            card.id = `card-${currentId}`;
-            card.innerHTML = `
-                <div class="video-container"><div id="${currentId}"></div></div>
-                <div class="audio-bar">
-                    <button onclick="focusAudio('${currentId}')" id="btn-focus-${currentId}">🎵 Solo Audio</button>
-                    <button onclick="toggleMute('${currentId}')" id="btn-mute-${currentId}">Mute</button>
-                    <button onclick="removeVideo('${currentId}')" style="background:#d32f2f; max-width:40px;">X</button>
-                </div>
-            `;
-            document.getElementById('videoGrid').appendChild(card);
-
-            // Safe instantiation now that API readiness is verified
-            const player = new YT.Player(currentId, {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: { 'autoplay': 1, 'playsinline': 1 },
-                events: {
-                    'onReady': (event) => {
-                        event.target.mute(); // Default to muted
-                        updateButtonStates();
-                    },
-                    'onStateChange': () => {
-                        updateButtonStates();
-                    }
-                }
-            });
-
-            players.push({ id: currentId, instance: player });
-            playerIndex++;
-            input.value = '';
-        }
-
-        function focusAudio(targetId) {
-            players.forEach(p => {
-                if (p.id === targetId) {
-                    p.instance.unmute();
-                } else {
-                    p.instance.mute();
-                }
-            });
-            updateButtonStates();
-        }
-
-        function toggleMute(targetId) {
-            const playerObj = players.find(p => p.id === targetId);
-            if (playerObj) {
-                if (playerObj.instance.isMuted()) {
-                    playerObj.instance.unmute();
-                } else {
-                    playerObj.instance.mute();
-                }
-            }
-            updateButtonStates();
-        }
-
-        function unmuteAll() {
-            players.forEach(p => p.instance.unmute());
-            updateButtonStates();
-        }
-
-        function removeVideo(targetId) {
-            const index = players.findIndex(p => p.id === targetId);
-            if (index !== -1) {
-                players[index].instance.destroy();
-                players.splice(index, 1);
-                document.getElementById(`card-${targetId}`).remove();
-            }
-        }
-
-        function updateButtonStates() {
-            players.forEach(p => {
-                // Ensure player functions exist before calling to prevent race errors
-                if (typeof p.instance.isMuted !== 'function') return; 
-                
-                const isMuted = p.instance.isMuted();
-                const muteBtn = document.getElementById(`btn-mute-${p.id}`);
-                const focusBtn = document.getElementById(`btn-focus-${p.id}`);
-                
-                if (muteBtn && focusBtn) {
-                    muteBtn.innerText = isMuted ? "Unmute" : "Muted";
-                    muteBtn.style.background = isMuted ? "#333" : "#e65100";
-                    focusBtn.className = !isMuted ? "active" : "";
-                }
-            });
-        }
-    </script>
+    function pauseAll() {
+      players.forEach(p => p && p.pauseVideo && p.pauseVideo());
+    }
+  </script>
 </body>
 </html>
